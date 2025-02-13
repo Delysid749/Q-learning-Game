@@ -1,0 +1,69 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environment
+venv/
+.env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Logs and debug
+logs/
+*.log
+nohup.out
+debug.log
+
+# Data files
+data/*.csv
+data/*.json
+data/*.xml
+data/*.yaml
+data/*.yml
+
+# Model checkpoints and results
+checkpoints/
+src/*.h5
+src/*.pth
+src/*.pt
+
+# TensorBoard log files
+runs/
+
+# IDE and editor-specific files
+.idea/
+.vscode/
+*.iml
+
+# Python dependency files
+Pipfile
+Pipfile.lock
+requirements.txt
+
+# Cache files
+.cache/
+*.pickle
+
+# Docker
+*.dockerignore
+docker-compose.override.yml
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
+*.swp
+
+# Ignore Q-learning experiment outputs
+data/qlearning_results/
+data/qlearning_logs/
+src/qlearning_models/
