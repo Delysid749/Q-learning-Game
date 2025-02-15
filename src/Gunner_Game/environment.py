@@ -72,29 +72,28 @@ class ApocalypseGunnerEnv:
         """ 计算奖励 """
         reward = 0
 
-        # 记录要删除的子弹和敌人
         bullets_to_remove = []
-        enemies_to_remove = []
+        enemies_to_remove = set()
 
         for bullet in self.bullets_list:
             for enemy in self.enemy_list:
                 if (bullet[0] < enemy[0] + self.enemy_size_x and bullet[0] > enemy[0]
                         and bullet[1] < enemy[1] + self.enemy_size_y and bullet[1] > enemy[1]):
                     bullets_to_remove.append(bullet)
-                    enemies_to_remove.append(enemy)
-                    reward += 10  # 击中敌人 +10 分
+                    enemies_to_remove.add(tuple(enemy))
+                    reward += 10  #  增加奖励，鼓励命中目标
 
-        # 删除命中的敌人和子弹
-        for bullet in bullets_to_remove:
-            self.bullets_list.remove(bullet)
-        for enemy in enemies_to_remove:
-            self.enemy_list.remove(enemy)
+        # 避免 remove() 报错，改为列表推导式
+        self.bullets_list = [b for b in self.bullets_list if b not in bullets_to_remove]
+        self.enemy_list = [e for e in self.enemy_list if tuple(e) not in enemies_to_remove]
 
-        # 未命中子弹扣分
-        for bullet in self.bullets_list:
-            if bullet[1] < 0:
-                self.bullets_list.remove(bullet)
-                reward -= 2  # 未命中 -2 分
+        #  如果 AI 存活一定时间，给予额外奖励，鼓励生存
+        if len(self.enemy_list) > 0:
+            reward += 1
+
+            #  减少未命中扣分，避免 AI 过度惩罚射击
+        if reward == 0:
+            reward -= 1  # 之前是 -2，改为 -1
 
         return reward
 
