@@ -20,16 +20,25 @@ BLACK = (0, 0, 0)
 font = pygame.font.Font(None, 36)
 clock = pygame.time.Clock()
 
-# 创建游戏环境
+# **创建游戏环境（玩家模式，不传 is_training，默认渲染画面）**
 env = ApocalypseGunnerEnv()
 state = env.reset()
 
 # **事件监听**
 def handle_events():
+    action = "NO_ACTION"  # 默认不执行任何操作
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                action = "LEFT"
+            elif event.key == pygame.K_RIGHT:
+                action = "RIGHT"
+            elif event.key == pygame.K_SPACE:
+                action = "SHOOT"
+    return action
 
 # **绘制界面**
 def draw_objects():
@@ -57,26 +66,15 @@ def draw_objects():
 # **游戏主循环**
 running = True
 while running:
-    handle_events()
+    action = handle_events()
 
-    # 获取键盘输入控制
-    keys = pygame.key.get_pressed()
-    action = None  # 0: 左移, 1: 右移, 2: 开火
+    # **无论是否有输入，都执行环境更新**
+    state, reward, done = env.step(action)
 
-    if keys[pygame.K_LEFT]:
-        action = 0
-    if keys[pygame.K_RIGHT]:
-        action = 1
-    if keys[pygame.K_SPACE]:
-        action = 2
+    # **只有在玩家模式下，才调用 render()**
+    env.render(screen)
 
-    if action is not None:
-        state, reward, done = env.step(action)  # 通过 `environment.py` 控制游戏
-        if done:
-            running = False
-
-    draw_objects()
-    clock.tick(30)
+    clock.tick(60)  # 控制帧率
 
 # **游戏结束**
 screen.fill(WHITE)

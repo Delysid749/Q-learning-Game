@@ -28,8 +28,6 @@ class QLearningAgent:
         new_q = old_q + self.alpha * (reward + self.gamma * max_next_q - old_q)
         self.q_table.setdefault(state, {})[action] = new_q
 
-        q_value_logger.info(f"State: {state}, Action: {action}, Old Q: {old_q:.4f}, New Q: {new_q:.4f}, Reward: {reward}")
-
     def choose_action(self, state):
         if random.random() < self.epsilon:
             return random.randint(0, self.action_size - 1)  # 随机探索

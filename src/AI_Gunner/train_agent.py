@@ -9,7 +9,7 @@ from logs_config.log_config import train_logger
 
 def train(num_episodes=5000):
     """ 训练 AI 代理 """
-    env = ApocalypseGunnerEnv()
+    env = ApocalypseGunnerEnv(is_training=True)
     agent = QLearningAgent(state_size=len(env.get_state()), action_size=3)
 
     for episode in range(num_episodes):
@@ -32,10 +32,9 @@ def train(num_episodes=5000):
         agent.decay_epsilon()  # 逐步减少探索率
 
         # 记录训练日志
-        train_logger.info(f"Episode {episode}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}")
-
-        if episode % 100 == 0:
+        if episode % 1000 == 0:
             print(f"Episode {episode}, Total Reward: {total_reward}")
+            train_logger.info(f"Episode {episode}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}")
 
     agent.save()
     print("训练完成，Q-table 已保存！")

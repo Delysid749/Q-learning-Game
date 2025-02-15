@@ -26,8 +26,6 @@ while not done:
     # 执行动作 & 更新环境
     state, reward, done = env.step(action)
 
-    # 记录游戏过程日志
-    game_logger.info(f"State: {state}, Action: {action}, Reward: {reward}")
 
     # **修正**：正确传入 `screen`
     env.render(screen)
