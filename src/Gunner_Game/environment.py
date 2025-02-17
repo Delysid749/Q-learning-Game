@@ -70,7 +70,7 @@ class ApocalypseGunnerEnv:
         reward += self.get_reward()
 
         # 游戏结束检查
-        if self.gunner_lives <= 0:
+        if self.gunner_lives <= 0 or self.score < -20:
             self.done = True
 
         return self.get_state(), reward, self.done
@@ -88,6 +88,7 @@ class ApocalypseGunnerEnv:
                     bullets_to_remove.append(bullet)
                     enemies_to_remove.add(tuple(enemy))
                     reward += 10
+                    self.score += 10
 
         # **避免 remove() 报错**
         self.bullets_list = [b for b in self.bullets_list if b not in bullets_to_remove]
@@ -99,11 +100,31 @@ class ApocalypseGunnerEnv:
         if reward == 0:
             reward -= 1
 
+        # 若角色与障碍相撞，生命值扣1
+        gunner_rect = pygame.Rect(self.gunner_x,self.gunner_y,self.gunner_size_x,self.gunner_size_y)
+        enemies_collided = []
+        for enemy in self.enemy_list:
+            enemy_rect = pygame.Rect(enemy[0],enemy[1],self.enemy_size_x,self.enemy_size_y)
+            if gunner_rect.colliderect(enemy_rect):
+                self.gunner_lives -= 1
+                enemies_collided.append(enemy)
+        self.enemy_list = [e for e in self.enemy_list if e not in enemies_collided]
+
+
         return reward
 
     def update_objects(self):
+        new_bullets = []
+        for b in self.bullets_list:
+            new_y = b[1] - self.bullet_velocity
+            if new_y > 0:
+                new_bullets.append([b[0],new_y])
+            else:
+                self.score -= 5
+        self.bullets_list = new_bullets
+
         """ 更新子弹 & 敌人 """
-        self.bullets_list = [[b[0], b[1] - self.bullet_velocity] for b in self.bullets_list if b[1] > 0]
+        # self.bullets_list = [[b[0], b[1] - self.bullet_velocity] for b in self.bullets_list if b[1] > 0]
         self.enemy_list = [[e[0], e[1] + self.enemy_speed] for e in self.enemy_list if e[1] < SCREEN_HEIGHT]
 
         # 生成新敌人 (降低频率)
@@ -112,11 +133,6 @@ class ApocalypseGunnerEnv:
             self.enemy_list.append([enemy_x, 0])
 
     def render(self, screen):
-        """ 仅在非 AI 训练模式下渲染游戏 """
-        if self.is_training:
-            return
-
-        screen.fill((255, 255, 255))
         pygame.draw.rect(screen, (0, 0, 255), (self.gunner_x, self.gunner_y, self.gunner_size_x, self.gunner_size_y))
 
         for bullet in self.bullets_list:
@@ -125,4 +141,4 @@ class ApocalypseGunnerEnv:
         for enemy in self.enemy_list:
             pygame.draw.rect(screen, (0, 0, 0), (enemy[0], enemy[1], self.gunner_size_x, self.gunner_size_y))
 
-        pygame.display.update()
+
