@@ -41,7 +41,8 @@ def draw_objects():
     screen.fill(WHITE)
 
     # 画出玩家角色
-    pygame.draw.rect(screen, BLUE, (env.gunner_x, env.gunner_y, env.gunner_size_x, env.gunner_size_y))
+    screen.blit(env.gunner_model,(env.gunner_x,env.gunner_y))
+
 
     # 画出子弹
     for bullet in env.bullets_list:
@@ -49,7 +50,7 @@ def draw_objects():
 
     # 画出敌人
     for enemy in env.enemy_list:
-        pygame.draw.rect(screen, BLACK, (enemy[0], enemy[1], env.gunner_size_x, env.gunner_size_y))
+        screen.blit(enemy[2],(enemy[0],enemy[1]))
 
     # 显示分数和生命值
     draw_ui(screen,font, env.score, env.gunner_lives)

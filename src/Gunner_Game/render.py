@@ -13,6 +13,20 @@ GUNNER_IMAGE_DIR = os.path.join(BASE_DIR,"assets","images","gunner_img")
 gunner_images = [f for f in os.listdir(GUNNER_IMAGE_DIR) if f.endswith(".png")]
 GUNNER_IMAGE_PATH = os.path.join(GUNNER_IMAGE_DIR,random.choice(gunner_images)) if gunner_images else None
 
+# 障碍图片路径（随机选取）
+ENEMY_IMAGE_DIR = os.path.join(BASE_DIR,"assets","images","enemy_img")
+def get_random_enemy_image():
+    """ 随机选择一个敌人图片 """
+    enemy_images = [f for f in os.listdir(ENEMY_IMAGE_DIR) if f.endswith(".png")]
+    if enemy_images:
+        enemy_path = os.path.join(ENEMY_IMAGE_DIR, random.choice(enemy_images))
+        enemy_image = pygame.image.load(enemy_path).convert_alpha()
+        return enemy_image
+    return None
+
+
+# enemy_images = [f for f in os.listdir(ENEMY_IMAGE_DIR) if f.endswith(".png")]
+# ENEMY_IMAGE_PATH = os.path.join(ENEMY_IMAGE_DIR,random.choice(enemy_images)) if enemy_images else None
 
 # 定义全局颜色
 WHITE = (255, 255, 255)

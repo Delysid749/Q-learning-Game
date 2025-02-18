@@ -1,7 +1,7 @@
 import numpy as np
 import pygame
 import random
-from Gunner_Game.render import SCREEN_WIDTH,SCREEN_HEIGHT, BULLET_IMAGE_PATH, GUNNER_IMAGE_PATH
+from Gunner_Game.render import BLACK, SCREEN_WIDTH, SCREEN_HEIGHT, BULLET_IMAGE_PATH, GUNNER_IMAGE_PATH, get_random_enemy_image
 
 
 class ApocalypseGunnerEnv:
@@ -17,14 +17,13 @@ class ApocalypseGunnerEnv:
 
         # 渲染子弹
         self.bullet_image = pygame.image.load(BULLET_IMAGE_PATH).convert_alpha()
-        self.bullet_model = pygame.transform.scale(self.bullet_image, (self.bullet_size_x, self.bullet_size_y))
         self.bullet_size_x, self.bullet_size_y = 25, 30
+        self.bullet_model = pygame.transform.scale(self.bullet_image, (self.bullet_size_x, self.bullet_size_y))
         self.bullet_velocity = 7
 
         # 渲染障碍
         self.enemy_size_x, self.enemy_size_y = 50, 50
         self.enemy_speed = 3
-
 
         # AI 训练模式不渲染画面
         self.is_training = is_training
@@ -133,21 +132,24 @@ class ApocalypseGunnerEnv:
         self.bullets_list = new_bullets
 
         """ 更新子弹 & 敌人 """
-        self.enemy_list = [[e[0], e[1] + self.enemy_speed] for e in self.enemy_list if e[1] < SCREEN_HEIGHT]
+        self.enemy_list = [[e[0], e[1] + self.enemy_speed, e[2]] for e in self.enemy_list if e[1] < SCREEN_HEIGHT]
 
         # 生成新敌人 (降低频率)
         if random.random() < 0.05:
             enemy_x = random.randint(0, SCREEN_WIDTH - self.enemy_size_x)
-            self.enemy_list.append([enemy_x, 0])
+            enemy_img = get_random_enemy_image()
+            if enemy_img:
+                enemy_img = pygame.transform.scale(enemy_img,(self.enemy_size_x,self.enemy_size_y))
+            else:
+                enemy_img = pygame.Surface((self.enemy_size_x,self.enemy_size_y))
+                enemy_img.fill(BLACK)
+            self.enemy_list.append([enemy_x, 0, enemy_img])
 
     def render(self, screen):
-        screen.blit(self.gunner_model,(self.gunner_x,self.gunner_y))
-        # pygame.draw.rect(screen, (0, 0, 255), (self.gunner_x, self.gunner_y, self.gunner_size_x, self.gunner_size_y))
+        screen.blit(self.gunner_model, (self.gunner_x, self.gunner_y))
 
         for bullet in self.bullets_list:
-            # pygame.draw.rect(screen, (255, 0, 0), (bullet[0], bullet[1], 5, 10))
-
-            screen.blit(self.bullet_model,(bullet[0], bullet[1]))
+            screen.blit(self.bullet_model, (bullet[0], bullet[1]))
 
         for enemy in self.enemy_list:
-            pygame.draw.rect(screen, (0, 0, 0), (enemy[0], enemy[1], self.gunner_size_x, self.gunner_size_y))
+            screen.blit(enemy[2], (enemy[0], enemy[1]))
