@@ -1,7 +1,7 @@
 import pygame
 import random
 from Gunner_Game.environment import ApocalypseGunnerEnv
-from render import game_over_screen, draw_ui, WHITE, BLACK, RED, BLUE, SCREEN_WIDTH, SCREEN_HEIGHT, screen
+from render import game_over_screen, draw_ui, WHITE, BLACK, RED, BLUE, SCREEN_WIDTH, SCREEN_HEIGHT, screen, BULLET_IMAGE_PATH
 
 # 初始化 Pygame
 pygame.init()
@@ -45,7 +45,7 @@ def draw_objects():
 
     # 画出子弹
     for bullet in env.bullets_list:
-        pygame.draw.rect(screen, RED, (bullet[0], bullet[1], 5, 10))
+        screen.blit(env.bullet_model, (bullet[0], bullet[1]))
 
     # 画出敌人
     for enemy in env.enemy_list:

@@ -1,4 +1,17 @@
+import os
+import random
+
 import pygame.display
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+# 子弹的图片路径
+BULLET_IMAGE_PATH = os.path.join(BASE_DIR,"assets","images","bullet_img","bullet-background.png")
+
+# 射击手图片路径（随机选取）
+GUNNER_IMAGE_DIR = os.path.join(BASE_DIR,"assets","images","gunner_img")
+gunner_images = [f for f in os.listdir(GUNNER_IMAGE_DIR) if f.endswith(".png")]
+GUNNER_IMAGE_PATH = os.path.join(GUNNER_IMAGE_DIR,random.choice(gunner_images)) if gunner_images else None
 
 
 # 定义全局颜色
@@ -12,11 +25,9 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 500, 700
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
-
 # 渲染游戏结束
-def game_over_screen(screen,font, score):
+def game_over_screen(screen, font, score):
     # 游戏结束
-    SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
     screen.fill(WHITE)
     game_over_text = font.render("GAME OVER", True, BLACK)
     final_score_text = font.render(f"Final Score: {score}", True, BLACK)
@@ -30,8 +41,7 @@ def game_over_screen(screen,font, score):
 
 
 # 渲染左上角分数、生命值显示
-def draw_ui(screen,font, score, gunner_lives):
-    SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
+def draw_ui(screen, font, score, gunner_lives):
     pygame.draw.rect(screen, WHITE, (0, 0, SCREEN_WIDTH, 70))
     score_text = font.render(f"Score: {score}", True, BLACK)
     lives_text = font.render(f"Lives: {gunner_lives}", True, BLACK)
