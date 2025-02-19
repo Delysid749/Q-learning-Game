@@ -1,7 +1,8 @@
 import numpy as np
 import pygame
 import random
-from Gunner_Game.render import BLACK, SCREEN_WIDTH, SCREEN_HEIGHT, BULLET_IMAGE_PATH, GUNNER_IMAGE_PATH, get_random_enemy_image
+from Gunner_Game.render import (BLACK, SCREEN_WIDTH, SCREEN_HEIGHT,
+                                BULLET_IMAGE_PATH, GUNNER_IMAGE_PATH, get_random_enemy_image,be_attacked_sound,score_sound,game_fail_sound)
 
 
 class ApocalypseGunnerEnv:
@@ -98,6 +99,7 @@ class ApocalypseGunnerEnv:
                     enemies_to_remove.add(tuple(enemy))
                     reward += 10
                     self.score += 10
+                    score_sound.play()
 
         # **避免 remove() 报错**
         self.bullets_list = [b for b in self.bullets_list if b not in bullets_to_remove]
@@ -115,6 +117,7 @@ class ApocalypseGunnerEnv:
         for enemy in self.enemy_list:
             enemy_rect = pygame.Rect(enemy[0], enemy[1], self.enemy_size_x, self.enemy_size_y)
             if gunner_rect.colliderect(enemy_rect):
+                be_attacked_sound.play()
                 self.gunner_lives -= 1
                 enemies_collided.append(enemy)
         self.enemy_list = [e for e in self.enemy_list if e not in enemies_collided]

@@ -15,6 +15,18 @@ GUNNER_IMAGE_PATH = os.path.join(GUNNER_IMAGE_DIR,random.choice(gunner_images)) 
 
 # 障碍图片路径（随机选取）
 ENEMY_IMAGE_DIR = os.path.join(BASE_DIR,"assets","images","enemy_img")
+
+
+pygame.init()
+pygame.mixer.init()
+# 游戏音效渲染
+BE_ATTACKED_PATH = os.path.join(BASE_DIR,"assets","sounds","attacked","be_attacked.mp3")
+be_attacked_sound = pygame.mixer.Sound(BE_ATTACKED_PATH)
+GAME_FAIL_PATH = os.path.join(BASE_DIR,"assets","sounds","game_over","game-fail.mp3")
+game_fail_sound = pygame.mixer.Sound(GAME_FAIL_PATH)
+SCORE_PATH = os.path.join(BASE_DIR,"assets","sounds","score","score-recieved.mp3")
+score_sound = pygame.mixer.Sound(SCORE_PATH)
+
 def get_random_enemy_image():
     """ 随机选择一个敌人图片 """
     enemy_images = [f for f in os.listdir(ENEMY_IMAGE_DIR) if f.endswith(".png")]
@@ -24,9 +36,6 @@ def get_random_enemy_image():
         return enemy_image
     return None
 
-
-# enemy_images = [f for f in os.listdir(ENEMY_IMAGE_DIR) if f.endswith(".png")]
-# ENEMY_IMAGE_PATH = os.path.join(ENEMY_IMAGE_DIR,random.choice(enemy_images)) if enemy_images else None
 
 # 定义全局颜色
 WHITE = (255, 255, 255)
@@ -42,6 +51,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 # 渲染游戏结束
 def game_over_screen(screen, font, score):
     # 游戏结束
+    game_fail_sound.play()
     screen.fill(WHITE)
     game_over_text = font.render("GAME OVER", True, BLACK)
     final_score_text = font.render(f"Final Score: {score}", True, BLACK)
