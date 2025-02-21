@@ -1,7 +1,7 @@
 import pygame
 import random
 from Gunner_Game.environment import ApocalypseGunnerEnv
-from render import game_over_screen, draw_ui, WHITE, BLACK, RED, BLUE, SCREEN_WIDTH, SCREEN_HEIGHT, screen, BULLET_IMAGE_PATH
+from render import game_over_screen, draw_ui, WHITE, screen
 
 # 初始化 Pygame
 pygame.init()
@@ -40,17 +40,8 @@ def handle_events():
 def draw_objects():
     screen.fill(WHITE)
 
-    # 画出玩家角色
-    screen.blit(env.gunner_model,(env.gunner_x,env.gunner_y))
-
-
-    # 画出子弹
-    for bullet in env.bullets_list:
-        screen.blit(env.bullet_model, (bullet[0], bullet[1]))
-
-    # 画出敌人
-    for enemy in env.enemy_list:
-        screen.blit(enemy[2],(enemy[0],enemy[1]))
+    # 渲染角色、子弹、障碍
+    env.render(screen)
 
     # 显示分数和生命值
     draw_ui(screen,font, env.score, env.gunner_lives)

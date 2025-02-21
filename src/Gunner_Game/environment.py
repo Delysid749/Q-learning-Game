@@ -26,9 +26,15 @@ class ApocalypseGunnerEnv:
         self.enemy_size_x, self.enemy_size_y = 50, 50
         self.enemy_speed = 3
 
+        # 最大障碍、子弹
+        self.MAX_ENEMIES = 5
+        self.MAX_BULLETS = 3
+
         # AI 训练模式不渲染画面
         self.is_training = is_training
         self.reset()
+
+
 
     def reset(self):
         """ 复位游戏，返回初始状态 """
@@ -43,16 +49,21 @@ class ApocalypseGunnerEnv:
 
     def get_state(self):
         """ 获取游戏状态 (归一化处理) """
-        enemies = np.array([(enemy[0] / SCREEN_WIDTH, enemy[1] / SCREEN_HEIGHT) for enemy in self.enemy_list]).flatten()
-        bullets = np.array(
-            [(bullet[0] / SCREEN_WIDTH, bullet[1] / SCREEN_HEIGHT) for bullet in self.bullets_list]).flatten()
+        gunner_state = [self.gunner_x / SCREEN_WIDTH, self.gunner_y / SCREEN_HEIGHT]
 
-        if len(enemies) == 0:
-            enemies = np.zeros(2)
-        if len(bullets) == 0:
-            bullets = np.zeros(2)
+        # 敌人状态：若不足 MAX_ENEMIES，后面补零；若多余则截取前 MAX_ENEMIES 个
+        enemies_state = []
+        for enemy in self.enemy_list[:self.MAX_ENEMIES]:
+            enemies_state.extend([enemy[0] / SCREEN_WIDTH, enemy[1] / SCREEN_HEIGHT])
+        enemies_state += [0] * (2 * (self.MAX_ENEMIES - len(self.enemy_list)))
 
-        return np.concatenate(([self.gunner_x / SCREEN_WIDTH, self.gunner_y / SCREEN_HEIGHT], enemies, bullets))
+        # 子弹状态
+        bullets_state = []
+        for bullet in self.bullets_list[:self.MAX_BULLETS]:
+            bullets_state.extend([bullet[0] / SCREEN_WIDTH, bullet[1] / SCREEN_HEIGHT])
+        bullets_state += [0] * (2 * (self.MAX_BULLETS - len(self.bullets_list)))
+
+        return np.array(gunner_state + enemies_state + bullets_state)
 
     def step(self, action):
         """ 执行动作并返回 (新状态, 奖励, 是否结束)
@@ -71,7 +82,7 @@ class ApocalypseGunnerEnv:
         elif action == 1:  # 右移
             self.gunner_x = min(SCREEN_WIDTH - self.gunner_size_x, self.gunner_x + self.gunner_speed)
         elif action == 2:  # 开火
-            self.bullets_list.append([self.gunner_x + self.gunner_size_x // 2, self.gunner_y])
+            self.bullets_list.append([self.gunner_x + self.gunner_size_x // 2 - self.bullet_size_x // 2, self.gunner_y])
 
         # **即使无输入，也要更新游戏状态**
         self.update_objects()
@@ -85,21 +96,36 @@ class ApocalypseGunnerEnv:
 
         return self.get_state(), reward, self.done
 
+    # 检测子弹与障碍碰撞
+    def check_bullet_enemy_collision(self):
+        """
+        检测子弹与障碍的碰撞
+        返回列表，每个元素为(bullet,enemy)的元组，表示检测到的碰撞对
+        """
+        collided_pairs = []
+        for bullet in self.bullets_list:
+            bullet_rect = pygame.Rect(bullet[0],bullet[1],self.bullet_size_x,self.bullet_size_y)
+            for enemy in self.enemy_list:
+                enemy_rect = pygame.Rect(enemy[0],enemy[1],self.enemy_size_x,self.enemy_size_y)
+                if bullet_rect.colliderect(enemy_rect):
+                    collided_pairs.append((bullet,enemy))
+        return collided_pairs
+
+
     def get_reward(self):
         """ 计算奖励 """
         reward = 0
+        collided_pairs = self.check_bullet_enemy_collision()
         bullets_to_remove = []
         enemies_to_remove = set()
 
-        for bullet in self.bullets_list:
-            for enemy in self.enemy_list:
-                if (bullet[0] < enemy[0] + self.enemy_size_x and bullet[0] > enemy[0]
-                        and bullet[1] < enemy[1] + self.enemy_size_y and bullet[1] > enemy[1]):
-                    bullets_to_remove.append(bullet)
-                    enemies_to_remove.add(tuple(enemy))
-                    reward += 10
-                    self.score += 10
-                    score_sound.play()
+        for bullet,enemy in collided_pairs:
+            bullets_to_remove.append(bullet)
+            enemies_to_remove.add(tuple(enemy))
+            reward += 10
+            self.score += 10
+            score_sound.play()
+
 
         # **避免 remove() 报错**
         self.bullets_list = [b for b in self.bullets_list if b not in bullets_to_remove]
@@ -124,6 +150,15 @@ class ApocalypseGunnerEnv:
 
         return reward
 
+    # 生成障碍函数
+    def spawn_enemy(self):
+        if len(self.enemy_list) >= 10:
+            return
+        enemy_x = random.randint(0,SCREEN_WIDTH - self.enemy_size_x)
+        enemy_img = get_random_enemy_image()
+        enemy_img = pygame.transform.scale(enemy_img,(self.enemy_size_x,self.enemy_size_y))
+        self.enemy_list.append([enemy_x,0,enemy_img])
+
     def update_objects(self):
         new_bullets = []
         for b in self.bullets_list:
@@ -139,14 +174,7 @@ class ApocalypseGunnerEnv:
 
         # 生成新敌人 (降低频率)
         if random.random() < 0.05:
-            enemy_x = random.randint(0, SCREEN_WIDTH - self.enemy_size_x)
-            enemy_img = get_random_enemy_image()
-            if enemy_img:
-                enemy_img = pygame.transform.scale(enemy_img,(self.enemy_size_x,self.enemy_size_y))
-            else:
-                enemy_img = pygame.Surface((self.enemy_size_x,self.enemy_size_y))
-                enemy_img.fill(BLACK)
-            self.enemy_list.append([enemy_x, 0, enemy_img])
+            self.spawn_enemy()
 
     def render(self, screen):
         screen.blit(self.gunner_model, (self.gunner_x, self.gunner_y))
