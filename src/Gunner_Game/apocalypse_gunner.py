@@ -28,11 +28,11 @@ def handle_events():
             exit()
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                action = "LEFT"
+                action = "1"
             elif event.key == pygame.K_RIGHT:
-                action = "RIGHT"
+                action = "2"
             elif event.key == pygame.K_SPACE:
-                action = "SHOOT"
+                action = "3"
     return action
 
 

@@ -5,17 +5,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Gunner_Game.environment import ApocalypseGunnerEnv
 from AI_Gunner.agent import QLearningAgent
-from AI_Gunner.PrioritizedReplayBuffer import PrioritizedReplayBuffer
 
 RESULTS_DIR = os.path.join("..", "data", "train_result")
 
 
-def train(num_episodes=100, interval=10, batch_size=32):
+def train(num_episodes=2000, interval=100):
     env = ApocalypseGunnerEnv(is_training=True)
     agent = QLearningAgent(state_size=len(env.get_state()), action_size=4)
     agent.load()  # 加载已有的 Q-table（如果存在）
-
-    replay_buffer = PrioritizedReplayBuffer(capacity=10000)
 
     # 初始化监控指标
     metrics = {
@@ -32,6 +29,7 @@ def train(num_episodes=100, interval=10, batch_size=32):
     action_dist = {0: 0, 1: 0, 2: 0, 3: 0}
 
     for episode in range(num_episodes):
+        print(f"Starting episode {episode + 1}...")
         state = env.reset()
         total_reward = 0
         done = False
@@ -48,7 +46,7 @@ def train(num_episodes=100, interval=10, batch_size=32):
             action = agent.choose_action(state)
 
             # 更新动作分布
-            action_dist[action] += 1
+            action_dist[int(action)] += 1
 
             # 执行动作
             next_state, reward, done = env.step(action)
@@ -65,34 +63,16 @@ def train(num_episodes=100, interval=10, batch_size=32):
                 nearest = min(env.enemy_list, key=lambda e: abs(e[0] - env.gunner_x))
                 distances.append(abs(nearest[0] - env.gunner_x))
 
-            # 更新 Q 表
-            agent.update_q(state, action, reward, next_state)
-
-            # 计算 TD 误差并存入经验缓冲
-            current_q = agent.get_q(state, action)
-            max_next_q = max(agent.q_table.get(str(next_state), {}).values(), default=0)
-            td_error = reward + agent.gamma * max_next_q - current_q
-            replay_buffer.push(state, action, reward, next_state, done, td_error)
-
-            # 添加状态到状态覆盖率集合
-            unique_states.add(state)
+            # 存储状态-动作对
+            agent.store_move(state, action)
 
             state = next_state
             total_reward += reward
 
-        # 从缓冲区采样并更新 Q-table
-        if len(replay_buffer.buffer) >= batch_size:
-            batch, indices, weights = replay_buffer.sample(batch_size)
-            td_errors = []
-            for s, a, r, s_next, terminal in batch:
-                agent.update_q(s, a, r, s_next)
-                new_q = agent.get_q(s, a)
-                max_next_q = max(agent.q_table.get(str(s_next), {}).values(), default=0)
-                updated_td_error = r + agent.gamma * max_next_q - new_q
-                td_errors.append(updated_td_error)
-            replay_buffer.update_priorities(indices, td_errors)
-
-        agent.decay_parameters()
+        # 在每回合结束后更新 Q 值
+        agent.update_scores(total_reward, state)
+        agent.save()  # 保存Q值
+        print(f"Episode {episode + 1}: Q-values updated and saved.")
 
         hit_rate = hits / shots if shots > 0 else 0
         avg_distance = np.mean(distances) if distances else 0
@@ -103,7 +83,8 @@ def train(num_episodes=100, interval=10, batch_size=32):
         metrics['shoot_efficiency'].append(shoot_efficiency)
         metrics['episode_rewards'].append(total_reward)
 
-        print(f"Episode {episode}, Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}, Hit Rate: {hit_rate:.2f}, Avg Distance: {avg_distance:.2f}")
+        print(f"Episode {episode}, Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}, "
+              f"Hit Rate: {hit_rate:.2f}, Avg Distance: {avg_distance:.2f}")
 
         # 每100轮输出一次状态覆盖率和动作分布
         if episode % 100 == 0:
@@ -111,8 +92,8 @@ def train(num_episodes=100, interval=10, batch_size=32):
             print(f"Action distribution: {action_dist}")
 
         # 难度提升
-        if episode % interval == 0:
-            env.increase_difficulty()
+        # if episode % interval == 0:
+        #     env.increase_difficulty()
 
     agent.save()
     plot_metrics(metrics)

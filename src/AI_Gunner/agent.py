@@ -1,8 +1,6 @@
-# agent.py
 import os
 import json
 import random
-
 
 class QLearningAgent:
     def __init__(self, state_size, action_size):
@@ -22,6 +20,8 @@ class QLearningAgent:
 
         self.q_table = {}
         self.q_table_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'q_value.json')
+
+        self.moves = []  # 用来存储当前回合的状态-动作对
 
     def decay_parameters(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
@@ -50,7 +50,9 @@ class QLearningAgent:
             else:
                 return 0
         # 更新动作分布
-        self.action_dist[action] += 1
+        if action not in self.action_dist:
+            self.action_dist[action] = 0  # 如果没有，则初始化为 0
+        self.action_dist[action] += 1  # 更新动作分布
         return action
 
     def save(self):
@@ -64,3 +66,14 @@ class QLearningAgent:
                 self.q_table = json.load(f)
         except FileNotFoundError:
             pass
+
+    def store_move(self, state, action):
+        """记录状态-动作对"""
+        self.moves.append((state, action))
+
+    def update_scores(self, reward, next_state):
+        """更新 Q 值"""
+        history = list(reversed(self.moves))  # 反向遍历历史记录
+        for state, action in history:
+            self.update_q(state, action, reward, next_state)
+        self.moves = []  # 清空历史记录

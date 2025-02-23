@@ -38,6 +38,14 @@ class ApocalypseGunnerEnv:
         self.gunner_velocity_x = 0
         self.gunner_velocity_y = 0
 
+        # 用于存储状态-动作对
+        self.moves = []
+
+        # 初始化 Q 值表
+        self.q_table = {}
+        self.alpha = 0.7  # 学习率
+        self.gamma = 0.95  # 折扣因子
+
         # AI 训练模式不渲染画面
         self.is_training = is_training
         self.reset()
@@ -61,11 +69,11 @@ class ApocalypseGunnerEnv:
         # 新增：射击冷却计数器和无效射击标志
         self.shoot_cooldown = 0
 
+        self.moves = []  # 清空历史记录
         return self.get_state()
 
-    # 修改 environment.py 中的 get_state 方法
     def get_state(self):
-        """增强版状态编码"""
+        """增强版状态编码：简化为玩家和敌人的位置差以及速度"""
         state_features = []
 
         # 玩家位置（16等分，精度提升60%）
@@ -80,23 +88,15 @@ class ApocalypseGunnerEnv:
             # 相对位置（带方向编码）
             dx = (enemy[0] - self.gunner_x) / SCREEN_WIDTH  # 归一化水平差 [-1,1]
             dy = (enemy[1] - self.gunner_y) / SCREEN_HEIGHT  # 归一化垂直差 [0,1]
+            # 离散化水平和垂直距离
+            dx_bin = int(dx * 10)  # 水平位置分箱（-10到+10）
+            dy_bin = int(dy * 10)  # 垂直位置分箱（0到+10）
 
-            # 速度特征（基于敌人移动方向）
-            vx = self.enemy_speed * (-1 if dx < 0 else 1)  # 敌人水平速度方向
-            vy = self.enemy_speed  # 固定垂直速度
-
-            # 离散化编码（改进Flappy Bird式分箱）：
-            feature = [
-                int(dx * 10),  # 水平位置分箱（-10到+10）
-                int(dy * 20),  # 垂直位置分箱（0-20）
-                int(vx * 0.5) + 1,  # 速度方向编码（-1→0, +1→2）
-                int(vy * 0.2)  # 速度量级分箱
-            ]
-            enemy_features.extend(feature)
+            enemy_features.extend([dx_bin, dy_bin])
 
         # 填充不足3个敌人的情况
         if len(sorted_enemies) < 3:
-            enemy_features.extend([0] * 4 * (3 - len(sorted_enemies)))
+            enemy_features.extend([0] * 2 * (3 - len(sorted_enemies)))
 
         state_features.extend(enemy_features)
 
@@ -108,22 +108,9 @@ class ApocalypseGunnerEnv:
         ]
         state_features.extend(bullet_status)
 
-        # 战场态势特征（新增）：
-        state_features.append(
-            int(len(self.enemy_list) / self.MAX_ENEMIES * 5)  # 敌人密度分箱（0-5级）
-        )
-
         return tuple(state_features)
 
     def step(self, action):
-        """
-        执行动作并返回 (新状态, 奖励, 是否结束)
-        动作定义：
-          0 = 左移 + 射击（当冷却允许时）
-          1 = 右移 + 射击（当冷却允许时）
-          2 = 保持位置 + 射击
-          3 = 仅移动（不射击）
-        """
         reward = 0
         SHOOT_COOLDOWN = 15  # 射击冷却帧数，约0.25秒（60FPS下15帧）
         shoot_attempt = False
@@ -138,7 +125,6 @@ class ApocalypseGunnerEnv:
         elif action == 2:  # 保持 + 射击
             shoot_attempt = True
         elif action == 3:  # 仅移动
-            # 智能移动：向最近敌人方向移动
             if self.enemy_list:
                 nearest_x = sorted(self.enemy_list, key=lambda e: e[1])[0][0]
                 if self.gunner_x < nearest_x - 10:
@@ -146,27 +132,49 @@ class ApocalypseGunnerEnv:
                 elif self.gunner_x > nearest_x + 10:
                     self.gunner_x -= self.gunner_speed
 
-        # 射击逻辑（根据冷却和动作类型）
+        # 初始化 Q 值
+        state = self.get_state()
+        if state not in self.q_table:
+            self.q_table[state] = {action: 0.0 for action in range(4)}  # 给所有可能的动作初始化 Q 值
+
+        # 处理射击逻辑
         if shoot_attempt and self.shoot_cooldown <= 0 and len(self.bullets_list) < self.MAX_BULLETS:
             bullet_x = self.gunner_x + self.gunner_size_x // 2 - self.bullet_size_x // 2
             bullet_y = self.gunner_y
             self.bullets_list.append([bullet_x, bullet_y])
             self.shoot_cooldown = SHOOT_COOLDOWN
 
-        # 更新冷却
         self.shoot_cooldown = max(0, self.shoot_cooldown - 1)
 
         # 更新子弹和敌人的状态
         self.update_objects()
 
-        # 保持原有奖励机制
+        # 奖励机制
         reward += self.get_reward()
 
         # 判断是否结束
         if self.gunner_lives <= 0:
             self.done = True
+            self.update_scores()  # 回合结束时更新 Q 值
+
+        self.moves.append((state, action))
 
         return self.get_state(), reward, self.done
+
+    def get_q(self, state, action):
+        state = str(state)  # 将状态转换为字符串
+        return self.q_table.get(state, {}).get(action, 0.0)
+
+    def update_scores(self):
+        """ 更新 Q 值 """
+        for state, action in reversed(self.moves):
+            reward = self.get_reward()
+            max_next_q = max(self.q_table.get(state, {}).values(), default=0)
+            old_q = self.get_q(state, action)
+            new_q = old_q + self.alpha * (reward + self.gamma * max_next_q - old_q)
+            self.q_table.setdefault(state, {})[action] = new_q
+        self.moves = []  # 清空历史记录
+
 
     def check_bullet_enemy_collision(self):
         """
@@ -202,7 +210,7 @@ class ApocalypseGunnerEnv:
         self.enemy_list = [e for e in self.enemy_list if tuple(e) not in enemies_to_remove]
 
         # 生存奖励
-        reward += 2
+        reward += 0.01
 
         # 检测与敌人碰撞（降低生命并给予较大惩罚）
         gunner_rect = pygame.Rect(self.gunner_x, self.gunner_y, self.gunner_size_x, self.gunner_size_y)
@@ -213,8 +221,7 @@ class ApocalypseGunnerEnv:
                 be_attacked_sound.play()
                 self.gunner_lives -= 1
                 enemies_collided.append(enemy)
-                # 生命耗尽时给予高额惩罚
-                return -1000
+                reward -= 100
         self.enemy_list = [e for e in self.enemy_list if e not in enemies_collided]
 
         return reward
@@ -243,8 +250,6 @@ class ApocalypseGunnerEnv:
             new_y = b[1] - self.bullet_velocity
             if new_y > 0:
                 new_bullets.append([b[0], new_y])
-            else:
-                self.score -= 5
         self.bullets_list = new_bullets
 
         # 更新敌人位置并生成新敌人
