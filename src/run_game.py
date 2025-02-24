@@ -2,7 +2,7 @@ import pygame
 from Gunner_Game.environment import ApocalypseGunnerEnv
 from AI_Gunner.agent import QLearningAgent
 from logs_config.log_config import game_logger
-from Gunner_Game.render import game_over_screen, draw_ui, WHITE, BLACK, RED, BLUE, SCREEN_WIDTH, SCREEN_HEIGHT, screen
+from Gunner_Game.render import game_over_screen, draw_ui, WHITE, screen
 
 # 初始化 Pygame
 pygame.init()
@@ -33,7 +33,6 @@ while not done:
     # 执行动作 & 更新环境
     state, reward, done = env.step(action)
 
-    # **修正**：正确传入 `screen`
     env.render(screen)
 
     pygame.display.update()
