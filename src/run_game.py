@@ -19,7 +19,7 @@ agent.load()  # 加载 Q-table
 # AI 控制游戏
 done = False
 state = str(tuple(env.reset()))
-
+game_logger.info("游戏开始")
 while not done:
     pygame.event.pump()  # 处理 Pygame 事件，防止窗口无响应
 
@@ -38,5 +38,5 @@ while not done:
     pygame.display.update()
 
     clock.tick(60)  # 控制帧率
-
+game_logger.info("游戏结束，分数: %s", env.score)
 game_over_screen(screen, font, env.score)

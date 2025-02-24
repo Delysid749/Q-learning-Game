@@ -1,8 +1,7 @@
 import os
 import json
-from itertools import product
 
-# 计算 Q-table 存储路径
+# Q-table 存储路径
 q_table_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'q_value.json'))
 
 # 检查是否存在旧的 Q-table
@@ -14,29 +13,25 @@ else:
     q_table = {}
     print("未找到 Q-table，创建新表")
 
-# 定义游戏状态离散化范围
-gunner_x_positions = [round(i / 500, 2) for i in range(0, 501, 50)]
-enemy_y_positions = [round(i / 700, 2) for i in range(0, 701, 70)]
-bullet_y_positions = [round(i / 700, 2) for i in range(0, 701, 70)]
-actions = ["0", "1", "2"]  # 0: 左移, 1: 右移, 2: 射击
+ENEMY_SPEEDS = [2]
 
-# 统计新增状态
-new_states = 0
+# xdiff 范围 [-500, 500], 步长 20
+xdiff_range = range(-500, 501, 20)
 
-# 生成所有可能的状态组合
-for gunner_x, enemy_y, bullet_y in product(gunner_x_positions, enemy_y_positions, bullet_y_positions):
-    state_key = str((gunner_x, enemy_y, bullet_y))
+# ydiff 范围 [-700, 700], 步长 20
+ydiff_range = range(-700, 701, 20)
 
-    # 如果状态已存在，则跳过
-    if state_key not in q_table:
-        q_table[state_key] = {action: 0 for action in actions}  # 初始化新的状态
-        new_states += 1
 
-print(f"添加了 {new_states} 个新状态，总状态数: {len(q_table)}")
 
-# 存储更新后的 Q-table
-os.makedirs(os.path.dirname(q_table_path), exist_ok=True)
+q_values = {}
+
+for es in ENEMY_SPEEDS:
+    for xd in xdiff_range:
+        for yd in ydiff_range:
+            state_key = str((es, xd, yd))  # 确保与 environment.get_state() 返回形式对应
+            q_values[state_key] = {0: 0.0, 1: 0.0, 2: 0.0}  # 将Q值初始化为全0
+
 with open(q_table_path, "w") as f:
-    json.dump(q_table, f, indent=4)
+    json.dump(q_values, f, indent=4)
 
-print(f"Q-table 更新完成，存储于: {q_table_path}")
+print("成功初始化Q值，并存储到 data/q_value.json!")

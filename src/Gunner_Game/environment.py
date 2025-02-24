@@ -16,7 +16,7 @@ class ApocalypseGunnerEnv:
         # AI 训练模式不渲染画面
         self.is_training = is_training
 
-        # 公共参数（尺寸、速度等）即使在训练模式下也需要
+        # 公共参数（尺寸、速度等）
         self.gunner_size_x, self.gunner_size_y = 50, 50
         self.gunner_speed = 10
         self.gunner_lives = 1
@@ -26,7 +26,6 @@ class ApocalypseGunnerEnv:
 
         self.enemy_size_x, self.enemy_size_y = 50, 50
         self.enemy_speed = 2
-        self.enemy_spawn_rate = 0.1
 
         self.MAX_BULLETS = 5
 
@@ -67,49 +66,6 @@ class ApocalypseGunnerEnv:
 
         return self.get_state()
 
-    # def get_state(self):
-    #     """
-    #     状态编码：返回一个三元组 (enemy_speed, xdiff, ydiff)
-    #       - enemy_speed：固定的敌人下降速度
-    #       - xdiff：最近敌人 x 坐标与射击手 x 坐标的差（正表示敌人在右侧，负表示在左侧）
-    #       - ydiff：最近敌人 y 坐标与射击手 y 坐标的差（正表示敌人在下方，负表示在上方）
-    #     如果没有敌人，则返回默认远距离值。
-    #     """
-    #     state_features = []
-    #
-    #     # 玩家位置（16等分，精度提升60%）
-    #     gunner_x_bin = int(self.gunner_x / (SCREEN_WIDTH // 16))
-    #     state_features.append(gunner_x_bin)
-    #
-    #     # 敌人特征编码（最多3个）
-    #     enemy_features = []
-    #     sorted_enemies = sorted(self.enemy_list, key=lambda e: e[1])[:3]  # 取最近的3个敌人
-    #
-    #     for enemy in sorted_enemies:
-    #         # 相对位置（带方向编码）
-    #         dx = (enemy[0] - self.gunner_x) / SCREEN_WIDTH  # 归一化水平差 [-1,1]
-    #         dy = (enemy[1] - self.gunner_y) / SCREEN_HEIGHT  # 归一化垂直差 [0,1]
-    #         # 离散化水平和垂直距离
-    #         dx_bin = int(dx * 10)  # 水平位置分箱（-10到+10）
-    #         dy_bin = int(dy * 10)  # 垂直位置分箱（0到+10）
-    #
-    #         enemy_features.extend([dx_bin, dy_bin])
-    #
-    #     # 填充不足3个敌人的情况
-    #     if len(sorted_enemies) < 3:
-    #         enemy_features.extend([0] * 2 * (3 - len(sorted_enemies)))
-    #
-    #     state_features.extend(enemy_features)
-    #
-    #     # 子弹特征（增强）：
-    #     bullet_status = [
-    #         min(len(self.bullets_list), 3),  # 子弹数量
-    #         int(any(b[1] < SCREEN_HEIGHT / 2 for b in self.bullets_list)),  # 是否有子弹在屏幕上半部
-    #         self.shoot_cooldown // 5  # 冷却时间分箱（每5帧为一档）
-    #     ]
-    #     state_features.extend(bullet_status)
-    #
-    #     return tuple(state_features)
     def get_state(self):
         """
         状态编码：返回一个三元组 (enemy_speed, xdiff, ydiff)
@@ -130,10 +86,10 @@ class ApocalypseGunnerEnv:
 
     def step(self, action):
         """
-            修改后的 step 函数，仅接受三个动作：
-                0：左移动
-                1：右移动
-                2：射击开火
+            仅接受三个动作：
+            0：左移动
+            1：右移动
+            2：射击开火
         """
         reward = 0
         old_x = self.gunner_x
@@ -167,11 +123,16 @@ class ApocalypseGunnerEnv:
         """
         collided_pairs = []
         for bullet in self.bullets_list:
+            # 对于每个子弹，构造一个矩形表示其位置和大小
             bullet_rect = pygame.Rect(bullet[0], bullet[1], self.bullet_size_x, self.bullet_size_y)
             for enemy in self.enemy_list:
+                # 对于每个敌人，构造一个矩形表示其位置和大小
                 enemy_rect = pygame.Rect(enemy[0], enemy[1], self.enemy_size_x, self.enemy_size_y)
+                # 检查子弹矩形与敌人矩形是否重叠
                 if bullet_rect.colliderect(enemy_rect):
+                    # 如果相交，则将这个子弹和敌人的组合添加到 collided_pairs 列表中
                     collided_pairs.append((bullet, enemy))
+        # 返回所有检测到的碰撞组合
         return collided_pairs
 
     def get_reward(self,old_x=None, action=None):
@@ -194,27 +155,43 @@ class ApocalypseGunnerEnv:
         self.bullets_list = [b for b in self.bullets_list if b not in bullets_to_remove]
         self.enemy_list = [e for e in self.enemy_list if tuple(e) not in enemies_to_remove]
 
-        # 检测与敌人碰撞（降低生命并给予较大惩罚）
+        # 构造射击手（gunner）的矩形区域，用于检测与敌人的碰撞
         gunner_rect = pygame.Rect(self.gunner_x, self.gunner_y, self.gunner_size_x, self.gunner_size_y)
+        # 遍历所有敌人，检测是否与射击手碰撞
         for enemy in self.enemy_list:
+            # 构造当前敌人的矩形区域
             enemy_rect = pygame.Rect(enemy[0], enemy[1], self.enemy_size_x, self.enemy_size_y)
-            if gunner_rect.colliderect(enemy_rect):
-                if old_x is not None and action is not None and self.enemy_list:
-                    nearest_enemy = min(self.enemy_list, key=lambda e: abs(e[0] - old_x))
-                    enemy_x = nearest_enemy[0]
 
+            # 使用 colliderect() 方法检测射击手与敌人是否碰撞
+            if gunner_rect.colliderect(enemy_rect):
+                # 旧的 x 坐标 (old_x) 和当前动作 (action)，并且存在敌人列表
+                if old_x is not None and action is not None and self.enemy_list:
+                    # 找到距离射击手上一步位置 (old_x) 最近的敌人，使用 x 坐标差值的绝对值作为距离依据
+                    nearest_enemy = min(self.enemy_list, key=lambda e: abs(e[0] - old_x))
+                    enemy_x = nearest_enemy[0]  # 最近敌人的 x 坐标
+
+                    # 判断射击手是否朝向敌人的方向移动：
+                    # 如果敌人在左侧 (enemy_x < old_x) 且射击手向左移动 (action == 0)，则为“朝向敌人移动”
                     move_left_toward_enemy = (enemy_x < old_x) and (action == 0)
+                    # 如果敌人在右侧 (enemy_x > old_x) 且射击手向右移动 (action == 1)，则为“朝向敌人移动”
                     move_right_toward_enemy = (enemy_x > old_x) and (action == 1)
+
+                    # 如果射击手朝向敌人方向移动，给更高的惩罚 -1000
                     if move_left_toward_enemy or move_right_toward_enemy:
                         reward = -1000
                     else:
+                        # 如果碰撞发生但未朝敌人移动，给予基本惩罚 -1000
                         reward -= 1000
+
                 if self.be_attacked_sound:
                     self.be_attacked_sound.play()
+
                 self.gunner_lives -= 1
                 break
+
         return reward
 
+    # 生成敌人函数
     def spawn_enemy(self):
         enemy_x = random.randint(0, SCREEN_WIDTH - self.enemy_size_x)
         enemy_img = get_random_enemy_image()

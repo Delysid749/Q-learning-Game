@@ -51,7 +51,6 @@ done = False
 while not done:
     action = handle_events()
 
-
     state, reward, done = env.step(action)
 
     draw_objects()
