@@ -220,7 +220,7 @@ No manual input is required here. The AI decides movement or shooting according 
 
 * * *
 
-9\. Conclusion and Outlook
+8\. Conclusion and Outlook
 --------------------------
 
 * This project demonstrates how to employ **Q-Learning** to play a simple 2D shooting game. By customizing rewards, state encodings, and discrete actions, the AI incrementally learns to avoid collisions and shoot down enemies.
