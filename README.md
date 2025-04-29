@@ -1,3 +1,5 @@
+中文README见[README_CN.md](./README_CN.md)
+
 Apocalypse Gunner Q-Learning Project
 ====================================
 
@@ -128,7 +130,7 @@ This script uses `argparse` to accept a `-iter` command-line parameter for speci
 
 * Q-value update formula: 
   $$
-   Q(s, a) \leftarrow Q(s, a) + \alpha\bigl[r + \gamma \max_{a'}\,Q(s', a') - Q(s, a)\bigr]
+  Q(s, a) \leftarrow Q(s, a) + \alpha\bigl[r + \gamma \max_{a'}\,Q(s', a') - Q(s, a)\bigr]
   $$
 
 * Incorporates dynamic decay for the learning rate  $\alpha$  and exploration rate  $\epsilon$  to avoid overly unstable early learning or stagnation in later stages.
